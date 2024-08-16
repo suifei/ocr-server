@@ -1,0 +1,15 @@
+
+POST http://localhost:1111/ocr
+Content-Type: application/json
+
+{
+    "image_path": "c:/1.png"
+}
+
+###
+POST http://localhost:1111/ocr
+Content-Type: application/json
+
+{
+    "image_base64": ""
+}

@@ -1,0 +1,10 @@
+github.com/doraemonkeys/paddleocr v1.0.4 h1:x5Iv2UC64Qb/udT+ILLXqa69dR0JclJxDgNhOc9jsF8=
+github.com/doraemonkeys/paddleocr v1.0.4/go.mod h1:jQCVHpRPRjFTxODnFUl5P63UF+29vIPhOXSOCVzWFRo=
+github.com/gen2brain/go-unarr v0.2.3 h1:VwZg0P6Dc/8Uh51McjVhzUMg4wHwwbiyqjEFsFELc0c=
+github.com/gen2brain/go-unarr v0.2.3/go.mod h1:hoHheVuf0KT8/hfvkEL7GMwj2h7fq0lF72NdyySdr3c=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/natefinch/lumberjack.v2 v2.2.1 h1:bBRl1b0OH9s/DuPhuXpNl+VtCaJXFZ5/uEFST95x9zc=
+gopkg.in/natefinch/lumberjack.v2 v2.2.1/go.mod h1:YD8tP3GAjkrDg1eZH7EGmyESg/lsYskCTPBJVb9jqSc=
+gopkg.in/yaml.v2 v2.4.0 h1:D8xgwECY7CYvx+Y2n4sBz93Jn9JRvxdiyyo8CTfuKaY=
+gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=

@@ -1,0 +1,16 @@
+addr: localhost
+port: 1111
+ocr_exe_path: res/PaddleOCR-json.exe
+min_processors: 4
+max_processors: 8
+queue_size: 100
+scale_threshold: 75
+degrade_threshold: 25
+idle_timeout: 5m
+warm_up_count: 2
+shutdown_timeout: 30s
+log_file_path: ocr_server.log
+log_max_size: 100
+log_max_backups: 3
+log_max_age: 28
+log_compress: true
