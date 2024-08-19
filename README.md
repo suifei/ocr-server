@@ -59,6 +59,69 @@ go build -o ocr-server.exe cmd/server/main.go
 
 服务器首次运行时会自动下载所需的 PaddleOCR 模型。
 
+
+### Windows 下的命令行启动参数演示
+
+以下是几种不同配置下在 Windows 上启动服务的命令行示例：
+
+#### 使用默认配置启动服务
+
+```sh
+ocr-server.exe
+```
+
+#### 使用指定的配置文件启动服务
+
+```sh
+ocr-server.exe -config C:\path\to\config.yaml
+```
+
+#### 使用命令行参数覆盖配置文件中的设置
+
+```sh
+ocr-server.exe -config C:\path\to\config.yaml -addr 192.168.1.100 -port 8080 -min-processors 8 -log-file C:\logs\ocr_server.log
+```
+
+#### 仅使用命令行参数启动服务
+
+```sh
+ocr-server.exe -addr 192.168.1.100 -port 8080 -ocr C:\path\to\ocr_executable -min-processors 8 -max-processors 16 -queue-size 200 -scale-threshold 100 -degrade-threshold 50 -idle-timeout 10m -warm-up-count 4 -shutdown-timeout 1m -log-file C:\logs\ocr_server.log -log-max-size 200 -log-max-backups 5 -log-max-age 30 -log-compress
+```
+
+#### 显示帮助信息
+
+```sh
+ocr-server.exe -help
+```
+
+### 将服务启动为 Windows 服务
+
+可以使用 `sc` 命令将服务注册为 Windows 服务：
+
+#### 注册服务
+
+```sh
+sc create OCRServer binPath= "C:\path\to\ocr-server.exe -config C:\path\to\config.yaml" start= auto
+```
+
+#### 启动服务
+
+```sh
+sc start OCRServer
+```
+
+#### 停止服务
+
+```sh
+sc stop OCRServer
+```
+
+#### 删除服务
+
+```sh
+sc delete OCRServer
+```
+
 ### 配置
 
 可以通过 YAML 文件或命令行参数配置服务器。使用配置文件：
