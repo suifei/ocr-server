@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"sync/atomic"
+	"time"
 )
 
 func (s *Server) GetStats() map[string]interface{} {
@@ -18,14 +19,29 @@ func (s *Server) GetStats() map[string]interface{} {
 		totalUsage += atomic.LoadInt64(&p.usageCount)
 	}
 
-	stats := map[string]interface{}{
-		"active_processors": len(s.activeProcessors),
-		"in_use_processors": activeCount,
-		"idle_processors":   len(s.idleProcessors),
-		"queue_length":      len(s.taskQueue),
-		"total_usage":       totalUsage,
+	totalRequests := atomic.LoadInt64(&s.stats.TotalRequests)
+	successfulRequests := atomic.LoadInt64(&s.stats.SuccessfulRequests)
+	failedRequests := atomic.LoadInt64(&s.stats.FailedRequests)
+	averageProcessingTime := s.stats.AverageProcessingTime.Load().(time.Duration)
+
+	errorRate := float64(0)
+	if totalRequests > 0 {
+		errorRate = float64(failedRequests) / float64(totalRequests) * 100
 	}
 
-	log.Printf("Server stats: %+v", stats)
+	stats := map[string]interface{}{
+		"total_requests":          totalRequests,
+		"successful_requests":     successfulRequests,
+		"failed_requests":         failedRequests,
+		"error_rate":              errorRate,
+		"average_processing_time": averageProcessingTime.Seconds(),
+		"active_processors":       len(s.activeProcessors),
+		"in_use_processors":       activeCount,
+		"idle_processors":         len(s.idleProcessors),
+		"queue_length":            len(s.taskQueue),
+		"total_usage":             totalUsage,
+	}
+
+	log.Printf("服务器统计: %+v", stats)
 	return stats
 }

@@ -1,3 +1,4 @@
+.PHONY: all clean
 build:
 	go build -o ocr-server.exe ./cmd/server/main.go
 
@@ -8,4 +9,6 @@ test:
 	go build -o ocr-server.exe ./cmd/server/main.go && ./ocr-server.exe
 	
 clean:
-	del ocr-server.exe
+	rm -rf ocr-server.exe
+
+all: clean build test

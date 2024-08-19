@@ -1,12 +1,14 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/cenkalti/backoff"
 	"github.com/doraemonkeys/paddleocr"
 	"github.com/suifei/ocr-server/pkg/ocrengine"
 )
@@ -37,13 +39,13 @@ func (s *Server) createOCRProcessor() (*OCRProcessor, error) {
 	}, nil
 }
 
-func (s *Server) getAvailableProcessor() *OCRProcessor {
+func (s *Server) getAvailableProcessor(ctx context.Context) *OCRProcessor {
 	s.poolLock.Lock()
 	defer s.poolLock.Unlock()
 
 	for {
 		select {
-		case <-s.shutdownChan:
+		case <-ctx.Done():
 			return nil
 		default:
 			if len(s.idleProcessors) > 0 {
@@ -87,73 +89,86 @@ func (s *Server) releaseProcessor(processor *OCRProcessor) {
 
 	s.processorCond.Signal()
 }
-
-func (s *Server) processTask(task ocrTask) {
+func (s *Server) processTask(ctx context.Context, task ocrTask) {
 	defer s.wg.Done()
 
-	processor := s.getAvailableProcessor()
+	startTime := time.Now()
+
+	processor := s.getAvailableProcessor(ctx)
 	if processor == nil {
-		log.Println("No processor available, server is shutting down")
-		task.Response <- ocrResponse{Error: "Server is shutting down"}
+		log.Println("无可用处理器，服务器正在关闭")
+		task.Response <- ocrResponse{Error: "服务器正在关闭"}
+		s.updateStats(time.Since(startTime), false)
 		return
 	}
 
-	log.Printf("Processing task with processor %p", processor)
-	result, err := s.performOCRWithRetry(processor, task)
+	log.Printf("使用处理器 %p 处理任务", processor)
+	result, err := s.performOCRWithRetry(ctx, processor, task)
 
 	if err != nil {
-		log.Printf("OCR task failed: %v", err)
+		log.Printf("OCR 任务失败: %v", err)
 		task.Response <- ocrResponse{Error: err.Error()}
+		s.updateStats(time.Since(startTime), false)
 	} else if result.Code != paddleocr.CodeSuccess {
-		log.Printf("OCR task failed with code: %s", result.Msg)
-		task.Response <- ocrResponse{Error: fmt.Sprintf("OCR failed: %s", result.Msg)}
+		log.Printf("OCR 任务失败，错误代码: %s", result.Msg)
+		task.Response <- ocrResponse{Error: fmt.Sprintf("OCR 失败: %s", result.Msg)}
+		s.updateStats(time.Since(startTime), false)
 	} else {
-		log.Println("OCR task completed successfully")
+		log.Println("OCR 任务成功完成")
 		task.Response <- ocrResponse{Data: result.Data}
+		s.updateStats(time.Since(startTime), true)
 	}
 
 	s.releaseProcessor(processor)
 }
 
-func (s *Server) performOCRWithRetry(processor *OCRProcessor, task ocrTask) (paddleocr.Result, error) {
-	maxRetries := 3
+func (s *Server) performOCRWithRetry(ctx context.Context, processor *OCRProcessor, task ocrTask) (paddleocr.Result, error) {
 	var result paddleocr.Result
 	var err error
 
-	atomic.AddInt64(&processor.usageCount, 1)
-	defer atomic.AddInt64(&processor.usageCount, -1)
+	operation := func() error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			atomic.AddInt64(&processor.usageCount, 1)
+			defer atomic.AddInt64(&processor.usageCount, -1)
 
-	for retry := 0; retry < maxRetries; retry++ {
-		processor.mutex.Lock()
-		if task.ImagePath != "" {
-			result, err = processor.processor.OcrFileAndParse(task.ImagePath)
-		} else {
-			result, err = processor.processor.OcrAndParse(task.ImageData)
+			processor.mutex.Lock()
+			defer processor.mutex.Unlock()
+
+			if task.ImagePath != "" {
+				result, err = processor.processor.OcrFileAndParse(task.ImagePath)
+			} else {
+				result, err = processor.processor.OcrAndParse(task.ImageData)
+			}
+			processor.lastUsed = time.Now()
+
+			if err != nil {
+				log.Printf("OCR 处理器失败: %v。尝试重新初始化...", err)
+				processor.processor.Close()
+				newProcessor, initErr := s.createOCRProcessor()
+				if initErr != nil {
+					log.Printf("重新初始化 OCR 处理器失败: %v", initErr)
+					return err // 返回原始错误，让 backoff 重试
+				}
+				*processor = *newProcessor
+				processor.inUse = true
+				log.Printf("成功重新初始化 OCR 处理器")
+				return err // 返回原始错误，让 backoff 重试
+			}
+
+			return nil
 		}
-		processor.lastUsed = time.Now()
-		processor.mutex.Unlock()
-
-		if err == nil {
-			return result, nil
-		}
-
-		log.Printf("OCR processor failed: %v. Attempting to reinitialize...", err)
-
-		processor.mutex.Lock()
-		processor.processor.Close()
-		newProcessor, err := s.createOCRProcessor()
-		if err != nil {
-			processor.mutex.Unlock()
-			log.Printf("Failed to reinitialize OCR processor: %v", err)
-			time.Sleep(time.Second * time.Duration(retry+1)) // Exponential backoff
-			continue
-		}
-		*processor = *newProcessor
-		processor.inUse = true
-		processor.mutex.Unlock()
-
-		log.Printf("Successfully reinitialized OCR processor")
 	}
 
-	return result, fmt.Errorf("failed to perform OCR after %d retries", maxRetries)
+	backOff := backoff.NewExponentialBackOff()
+	backOff.MaxElapsedTime = 2 * time.Minute
+
+	err = backoff.Retry(operation, backoff.WithContext(backOff, ctx))
+	if err != nil {
+		return result, fmt.Errorf("执行 OCR 失败: %w", err)
+	}
+
+	return result, nil
 }

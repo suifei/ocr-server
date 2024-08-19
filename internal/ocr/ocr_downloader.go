@@ -7,46 +7,49 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gen2brain/go-unarr"
 )
 
 const (
 	ocrURL      = "https://github.com/hiroi-sora/PaddleOCR-json/releases/download/v1.4.0/PaddleOCR-json_v1.4.0_windows_x86-64.7z"
 	ocrFileName = "PaddleOCR-json_v1.4.0_windows_x86-64.7z"
-	ocrExeName  = "PaddleOCR-json.exe"
-	resDir      = "res/PaddleOCR-json_v1.4.0"
+	ocrExeName  = "PaddleOCR-json_v1.4.0/PaddleOCR-json.exe"
+	resDir      = "res"
 )
 
 func EnsureOCREngine() (string, error) {
 	ocrPath := filepath.Join(resDir, ocrExeName)
+
 	if _, err := os.Stat(ocrPath); err == nil {
-		fmt.Println("OCR engine already exists.")
+		fmt.Println("OCR 引擎已存在。")
 		return ocrPath, nil
 	}
 
-	fmt.Println("OCR engine not found. Starting download process...")
+	fmt.Println("未找到 OCR 引擎。开始下载过程...")
 
 	var proxyURL string
-	fmt.Print("Enter proxy URL (leave empty for direct download): ")
+	fmt.Print("输入代理 URL (留空则直接下载): ")
 	fmt.Scanln(&proxyURL)
 
-	if err := downloadOCR(proxyURL); err != nil {
-		return "", fmt.Errorf("failed to download OCR engine: %w", err)
+	if err := downloadOCRWithRetry(proxyURL); err != nil {
+		return "", fmt.Errorf("下载 OCR 引擎失败: %w", err)
 	}
 
 	if err := extractArchive(); err != nil {
-		return "", fmt.Errorf("failed to extract OCR engine: %w", err)
+		return "", fmt.Errorf("提取 OCR 引擎失败: %w", err)
 	}
 
-	fmt.Println("OCR engine successfully installed.")
+	fmt.Println("OCR 引擎安装成功。")
 	return ocrPath, nil
 }
 
-func downloadOCR(proxyURL string) error {
+func downloadOCRWithRetry(proxyURL string) error {
 	if _, err := os.Stat(resDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(resDir, 0755); err != nil {
-			return fmt.Errorf("failed to create res directory: %w", err)
+			return fmt.Errorf("创建 res 目录失败: %w", err)
 		}
 	}
 
@@ -54,72 +57,89 @@ func downloadOCR(proxyURL string) error {
 	if proxyURL != "" {
 		proxyURLParsed, err := url.Parse(proxyURL)
 		if err != nil {
-			return fmt.Errorf("invalid proxy URL: %w", err)
+			return fmt.Errorf("无效的代理 URL: %w", err)
 		}
 		client.Transport = &http.Transport{Proxy: http.ProxyURL(proxyURLParsed)}
 	}
 
-	resp, err := client.Get(ocrURL)
+	filePath := filepath.Join(resDir, ocrFileName)
+	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to download file: %w", err)
+		return fmt.Errorf("创建文件失败: %w", err)
 	}
-	defer resp.Body.Close()
+	defer file.Close()
 
-	out, err := os.Create(filepath.Join(resDir, ocrFileName))
+	fileInfo, err := file.Stat()
 	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer out.Close()
-
-	// Create a progress bar
-	total := resp.ContentLength
-	// progress := 0
-	lastPercentage := 0
-
-	reader := &ProgressReader{
-		Reader: resp.Body,
-		Total:  total,
-		OnProgress: func(current int64) {
-			if total > 0 {
-				percentage := int(float64(current) / float64(total) * 100)
-				if percentage > lastPercentage {
-					fmt.Printf("\rDownloading... %d%%", percentage)
-					lastPercentage = percentage
-				}
-			}
-		},
+		return fmt.Errorf("获取文件信息失败: %w", err)
 	}
 
-	_, err = io.Copy(out, reader)
+	resumePos := fileInfo.Size()
+
+	operation := func() error {
+		req, err := http.NewRequest("GET", ocrURL, nil)
+		if err != nil {
+			return fmt.Errorf("创建请求失败: %w", err)
+		}
+
+		if resumePos > 0 {
+			req.Header.Set("Range", fmt.Sprintf("bytes=%d-", resumePos))
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("发送请求失败: %w", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+			return fmt.Errorf("服务器返回错误状态码: %d", resp.StatusCode)
+		}
+
+		_, err = io.Copy(file, resp.Body)
+		if err != nil {
+			return fmt.Errorf("写入文件失败: %w", err)
+		}
+
+		return nil
+	}
+
+	backOff := backoff.NewExponentialBackOff()
+	backOff.MaxElapsedTime = 5 * time.Minute
+
+	err = backoff.Retry(operation, backOff)
 	if err != nil {
-		return fmt.Errorf("failed to save file: %w", err)
+		return fmt.Errorf("下载失败: %w", err)
 	}
 
-	fmt.Println("\nDownload completed successfully.")
+	fmt.Println("\n下载成功完成。")
 	return nil
 }
-
 func extractArchive() error {
 	archivePath := filepath.Join(resDir, ocrFileName)
 
 	a, err := unarr.NewArchive(archivePath)
 	if err != nil {
-		return fmt.Errorf("failed to open archive: %w", err)
+		return fmt.Errorf("打开压缩文件失败: %w", err)
 	}
 	defer a.Close()
 
-	content, err := a.Extract(resDir)
-	fmt.Println("Extracting files...", content)
+	_, err = a.Extract(resDir)
+
 	if err != nil {
-		return fmt.Errorf("failed to extract archive: %w", err)
+		fmt.Println("提取失败: %v\n", err)
 	}
 
-	// Remove the archive file after extraction
-	if err := os.Remove(archivePath); err != nil {
-		fmt.Printf("Warning: Failed to remove archive file: %v\n", err)
-	}
+	go func() {
+		time.Sleep(10 * time.Second)
 
-	fmt.Println("Extraction completed successfully.")
+		// Remove the archive file after extraction
+		if err := os.Remove(archivePath); err != nil {
+			fmt.Printf("警告: 删除文件失败: %v\n", err)
+		}
+	}()
+
+	fmt.Println("提取成功完成。")
 	return nil
 }
 
