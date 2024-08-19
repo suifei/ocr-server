@@ -319,6 +319,7 @@ OCR 服务器项目的开发离不开众多优秀的开源项目和社区的支�
 - [lumberjack](https://github.com/natefinch/lumberjack)：可靠的日志轮转工具。
 - [backoff](https://github.com/cenkalti/backoff)：实用的重试库。
 - [go-unarr](https://github.com/gen2brain/go-unarr)：方便的解压缩工具。
+- [paddleocr](https://github.com/doraemonkeys/paddleocr)：一个简单易用的 PaddleOCR-json golang 客户端。
 
 这些开源项目为我们的开发工作提供了宝贵的支持，使得 OCR 服务器的开发成为可能。我们深深感谢这些项目的贡献者们付出的努力和分享精神。
 
