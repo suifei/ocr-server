@@ -15,7 +15,10 @@ type OCREngine struct {
 
 func NewOCREngine(exePath string) (*OCREngine, error) {
 	startTime := time.Now()
-	processor, err := paddleocr.NewPpocr(exePath, paddleocr.OcrArgs{})
+	enable_mkldnn := true
+	processor, err := paddleocr.NewPpocr(exePath, paddleocr.OcrArgs{
+		EnableMkldnn:  &enable_mkldnn,
+	})
 	if err != nil {
 		utils.LogError("创建 OCR 引擎失败: exePath=%s, error=%v", exePath, err)
 		return nil, fmt.Errorf("创建 OCR 引擎失败: %w", err)
