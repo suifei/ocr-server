@@ -10,6 +10,7 @@ require (
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/spf13/viper v1.19.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

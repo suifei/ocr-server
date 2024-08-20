@@ -73,13 +73,13 @@ ocr-server.exe
 #### 使用指定的配置文件启动服务
 
 ```sh
-ocr-server.exe -config C:\path\to\config.yaml
+ocr-server.exe
 ```
 
 #### 使用命令行参数覆盖配置文件中的设置
 
 ```sh
-ocr-server.exe -config C:\path\to\config.yaml -addr 192.168.1.100 -port 8080 -min-processors 8 -log-file C:\logs\ocr_server.log
+ocr-server.exe -addr 192.168.1.100 -port 8080 -min-processors 8 -log-file C:\logs\ocr_server.log
 ```
 
 #### 仅使用命令行参数启动服务
@@ -101,7 +101,7 @@ ocr-server.exe -help
 #### 注册服务
 
 ```sh
-sc create OCRServer binPath= "C:\path\to\ocr-server.exe -config C:\path\to\config.yaml" start= auto
+sc create OCRServer binPath= "C:\path\to\ocr-server.exe" start= auto
 ```
 
 #### 启动服务
@@ -320,6 +320,7 @@ OCR 服务器项目的开发离不开众多优秀的开源项目和社区的支�
 - [backoff](https://github.com/cenkalti/backoff)：实用的重试库。
 - [go-unarr](https://github.com/gen2brain/go-unarr)：方便的解压缩工具。
 - [paddleocr](https://github.com/doraemonkeys/paddleocr)：一个简单易用的 PaddleOCR-json golang 客户端。
+- [yaml](gopkg.in/yaml.v2)：YAML 配置文件的解析库。
 
 这些开源项目为我们的开发工作提供了宝贵的支持，使得 OCR 服务器的开发成为可能。我们深深感谢这些项目的贡献者们付出的努力和分享精神。
 
