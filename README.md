@@ -127,7 +127,7 @@ sc delete OCRServer
 可以通过 YAML 文件或命令行参数配置服务器。使用配置文件：
 
 ```
-./ocr-server.exe -config path/to/config.yaml
+./ocr-server.exe
 ```
 
 使用命令行配置：
@@ -188,6 +188,28 @@ GET /stats
 | log_max_backups | 保留的旧日志文件最大数量 | 3 |
 | log_max_age | 保留旧日志文件的最大天数 | 28 |
 | log_compress | 是否压缩轮转的日志文件 | true |
+| threshold-mode | 阈值模式 | 0  |
+| threshold-value | 阈值 | 100 |
+
+阈值处理相关选项说明：
+
+1. threshold-mode:
+   - 描述：指定图像二值化时使用的阈值处理模式。
+   - 可选值：
+     - 参数 0 = "binary": 使用固定阈值进行二值化
+     - 参数 1 = "otsu": 使用Otsu算法自动计算最佳阈值
+   - 默认值：0
+
+2. threshold-value:
+   - 描述：当 threshold-mode 为 0 "binary" 时使用的固定阈值。
+   - 取值范围：0-255
+   - 默认值：100
+   - 注意：当 threshold-mode 为 1 "otsu" 时，此值会被忽略，因为Otsu算法会自动计算最佳阈值。
+
+使用说明：
+- 如果您希望使用固定阈值进行图像二值化，请将 threshold-mode 设置为 "binary"，并通过 threshold-value 指定所需的阈值（0-255之间的整数）。
+- 如果您希望系统自动确定最佳阈值，请将 threshold-mode 设置为 "otsu"。在这种情况下，threshold-value 的设置将被忽略。
+- Otsu方法特别适用于具有双峰直方图的图像（即前景和背景有明显区分的图像），它能够自动找到最佳的分割阈值。
 
 ## 架构设计
 

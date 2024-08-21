@@ -14,7 +14,7 @@ import (
 var (
 	version     = "1.0.0" // 版本信息
 	showVersion = flag.Bool("version", false, "显示版本信息")
-	
+
 	// 新增命令行参数
 	addr             = flag.String("addr", "", "服务器地址")
 	port             = flag.Int("port", 0, "服务器端口")
@@ -32,6 +32,8 @@ var (
 	logMaxBackups    = flag.Int("log-max-backups", 0, "最大日志文件备份数")
 	logMaxAge        = flag.Int("log-max-age", 0, "最大日志文件保留天数")
 	logCompress      = flag.Bool("log-compress", false, "是否压缩日志文件")
+	thresholdMode    = flag.Int("threshold-mode", 0, "二值化阈值模式 0 binary,1 otsu")
+	thresholdValue   = flag.Int("threshold-value", 100, "二值化阈值 0-255")
 )
 
 func main() {
@@ -48,6 +50,14 @@ func main() {
 		fmt.Printf("OCR Server 版本: %s\n", version)
 		os.Exit(0)
 	}
+    // 使用默认配置初始化日志
+    utils.SetupLogger(config.Config{
+        LogFilePath:   "ocr_server.log",
+        LogMaxSize:    100,
+        LogMaxBackups: 3,
+        LogMaxAge:     28,
+        LogCompress:   false,
+    })
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -59,8 +69,8 @@ func main() {
 	applyCommandLineArgs(&cfg)
 
 	if err := config.ValidateConfig(&cfg); err != nil {
-		utils.LogError("配置验证失败: %v", err)
-		os.Exit(1)
+		utils.LogWarning("配置验证警告: %v", err)
+		fmt.Println("警告：正在使用旧版本的配置文件。建议更新到新版本以使用所有新功能。")
 	}
 
 	utils.SetupLogger(cfg)
@@ -127,5 +137,12 @@ func applyCommandLineArgs(cfg *config.Config) {
 	if *logMaxAge != 0 {
 		cfg.LogMaxAge = *logMaxAge
 	}
+	if *thresholdMode != 0 {
+		cfg.ThresholdMode = *thresholdMode
+	}
+	if *thresholdValue != 100 {
+		cfg.ThresholdValue = *thresholdValue
+	}
+
 	cfg.LogCompress = *logCompress
 }

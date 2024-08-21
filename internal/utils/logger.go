@@ -19,6 +19,12 @@ var (
 	errorLogger   *log.Logger
 )
 
+func init() {
+	// 设置默认的日志记录器
+	infoLogger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lmicroseconds)
+	warningLogger = log.New(os.Stdout, "WARNING: ", log.Ldate|log.Ltime|log.Lmicroseconds)
+	errorLogger = log.New(os.Stdout, "ERROR: ", log.Ldate|log.Ltime|log.Lmicroseconds)
+}
 func SetupLogger(cfg config.Config) {
 	logFile := &lumberjack.Logger{
 		Filename:   cfg.LogFilePath,

@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/cenkalti/backoff"
 	"github.com/doraemonkeys/paddleocr"
+	"github.com/suifei/ocr-server/internal/imgproc"
 	"github.com/suifei/ocr-server/pkg/ocrengine"
 )
 
@@ -137,11 +139,22 @@ func (s *Server) performOCRWithRetry(ctx context.Context, processor *OCRProcesso
 			processor.mutex.Lock()
 			defer processor.mutex.Unlock()
 
+			var buff []byte
+
 			if task.ImagePath != "" {
-				result, err = processor.processor.OcrFileAndParse(task.ImagePath)
+				buff, err = os.ReadFile(task.ImagePath)
 			} else {
-				result, err = processor.processor.OcrAndParse(task.ImageData)
+				buff = task.ImageData
 			}
+			// 二值化
+			threshold := s.config.ThresholdValue
+			thresholdMode := imgproc.ThresholdMode(s.config.ThresholdMode)
+			img, _ := imgproc.BytesToImage(buff)
+			processedImg := imgproc.ProcessImage(img, uint8(threshold), thresholdMode)
+			imgdata, _ := imgproc.GrayImageToPNGBytes(processedImg)
+			task.ImageData = imgdata
+			result, err = processor.processor.OcrAndParse(task.ImageData)
+
 			processor.lastUsed = time.Now()
 
 			if err != nil {

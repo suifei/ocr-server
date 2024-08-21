@@ -30,6 +30,8 @@ type Config struct {
 	LogMaxBackups    int           `mapstructure:"log_max_backups" yaml:"log_max_backups" validate:"required,min=0"`
 	LogMaxAge        int           `mapstructure:"log_max_age" yaml:"log_max_age" validate:"required,min=1"`
 	LogCompress      bool          `mapstructure:"log_compress" yaml:"log_compress"`
+	ThresholdMode    int           `mapstructure:"threshold_mode" yaml:"threshold_mode"`
+	ThresholdValue   int           `mapstructure:"threshold_value" yaml:"threshold_value" validate:"required,min=0,max=255"`
 }
 
 func LoadConfig() (Config, error) {
@@ -68,6 +70,8 @@ func setDefaults(cfg *Config) {
 	cfg.LogMaxBackups = 3
 	cfg.LogMaxAge = 28
 	cfg.LogCompress = false
+	cfg.ThresholdMode = 0
+	cfg.ThresholdValue = 100
 }
 
 func generateDefaultConfig(cfg Config) error {
