@@ -3,10 +3,7 @@ module github.com/suifei/ocr-server
 go 1.22.3
 
 require (
-	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/doraemonkeys/paddleocr v1.0.4
-	github.com/gen2brain/go-unarr v0.2.3
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/spf13/viper v1.19.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

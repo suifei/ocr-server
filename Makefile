@@ -1,14 +1,22 @@
-.PHONY: all clean
+.PHONY: all build run test clean
+
+GO ?= go
+GOOS := $(shell $(GO) env GOOS)
+BIN := ocr-server
+ifeq ($(GOOS),windows)
+BIN := ocr-server.exe
+endif
+
+all: test build
+
 build:
-	go build -o ocr-server.exe ./cmd/server/main.go
+	$(GO) build -o $(BIN) ./cmd/server
 
 run:
-	go run ./cmd/server/main.go
+	$(GO) run ./cmd/server
 
 test:
-	go build -o ocr-server.exe ./cmd/server/main.go && ./ocr-server.exe
-	
-clean:
-	rm -rf ocr-server.exe
+	$(GO) test ./...
 
-all: clean build test
+clean:
+	rm -f ocr-server ocr-server.exe
