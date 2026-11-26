@@ -10,14 +10,9 @@ func (s *Server) GetStats() map[string]interface{} {
 	s.poolLock.Lock()
 	defer s.poolLock.Unlock()
 
-	activeCount := 0
-	totalUsage := int64(0)
-	for _, p := range s.activeProcessors {
-		if p.inUse {
-			activeCount++
-		}
-		totalUsage += atomic.LoadInt64(&p.usageCount)
-	}
+	// The active slice now contains only checked-out workers.
+	activeCount := len(s.activeProcessors)
+	totalUsage := int64(activeCount)
 
 	totalRequests := atomic.LoadInt64(&s.stats.TotalRequests)
 	successfulRequests := atomic.LoadInt64(&s.stats.SuccessfulRequests)

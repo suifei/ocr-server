@@ -12,13 +12,17 @@ import (
 )
 
 var (
-	version     = "1.0.0" // 版本信息
+	version     = "dev" // 构建时可用 -ldflags "-X main.version=<version>" 覆盖
 	showVersion = flag.Bool("version", false, "显示版本信息")
 
 	// 新增命令行参数
 	addr             = flag.String("addr", "", "服务器地址")
 	port             = flag.Int("port", 0, "服务器端口")
-	ocrExePath       = flag.String("ocr-exe", "", "OCR可执行文件路径")
+	ocrBackend       = flag.String("ocr-backend", "", "OCR 后端：paddleocr 或 legacy")
+	ocrPython        = flag.String("ocr-python", "", "PaddleOCR 虚拟环境解释器路径")
+	ocrDetModel      = flag.String("ocr-det-model", "", "本地文本检测模型目录（可选）")
+	ocrRecModel      = flag.String("ocr-rec-model", "", "本地文本识别模型目录（可选）")
+	ocrExePath       = flag.String("ocr-exe", "", "旧版 PaddleOCR-json 可执行文件路径")
 	minProcessors    = flag.Int("min-processors", 0, "最小处理器数量")
 	maxProcessors    = flag.Int("max-processors", 0, "最大处理器数量")
 	queueSize        = flag.Int("queue-size", 0, "队列大小")
@@ -50,14 +54,14 @@ func main() {
 		fmt.Printf("OCR Server 版本: %s\n", version)
 		os.Exit(0)
 	}
-    // 使用默认配置初始化日志
-    utils.SetupLogger(config.Config{
-        LogFilePath:   "ocr_server.log",
-        LogMaxSize:    100,
-        LogMaxBackups: 3,
-        LogMaxAge:     28,
-        LogCompress:   false,
-    })
+	// 使用默认配置初始化日志
+	utils.SetupLogger(config.Config{
+		LogFilePath:   "ocr_server.log",
+		LogMaxSize:    100,
+		LogMaxBackups: 3,
+		LogMaxAge:     28,
+		LogCompress:   false,
+	})
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -100,6 +104,19 @@ func applyCommandLineArgs(cfg *config.Config) {
 	}
 	if *ocrExePath != "" {
 		cfg.OCRExePath = *ocrExePath
+		cfg.OCRBackend = config.BackendLegacy
+	}
+	if *ocrBackend != "" {
+		cfg.OCRBackend = *ocrBackend
+	}
+	if *ocrPython != "" {
+		cfg.OCRPython = *ocrPython
+	}
+	if *ocrDetModel != "" {
+		cfg.OCRDetModel = *ocrDetModel
+	}
+	if *ocrRecModel != "" {
+		cfg.OCRRecModel = *ocrRecModel
 	}
 	if *minProcessors != 0 {
 		cfg.MinProcessors = *minProcessors
