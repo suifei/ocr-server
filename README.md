@@ -4,6 +4,8 @@ Go 编写的本地 OCR HTTP 服务。默认使用 **PaddleOCR 3.7.0 + PP-OCRv6 s
 
 ## 安装与启动
 
+已有发布包的用户请看 [Linux 与 Apple Silicon 部署指南](docs/deploy.md)：无需安装 Go，包含校验、实际 OCR 冒烟测试和 Linux systemd 示例。
+
 需要 Go 1.25.0+（仅构建时；发布包使用 Go 1.27.4）和对应平台的 CPython 3.12。Python 依赖安装在项目独立虚拟环境，Go 可执行文件不包含 Python 或模型。
 
 | 平台 | 支持范围 | 启动方式 |
